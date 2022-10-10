@@ -57,8 +57,3 @@ Thumbs.db
 *.code-workspace
 
 # Local History for Visual Studio Code
-
-
-#
-
-src/*/appsettings.*.json

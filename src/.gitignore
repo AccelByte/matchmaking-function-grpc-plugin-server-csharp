@@ -409,5 +409,5 @@ FodyWeavers.xsd
 # TAP test results
 *.tap
 
-*/appsettings.*.json
-!/appsettings.json
+**/appsettings.*.json
+!**/appsettings.json
