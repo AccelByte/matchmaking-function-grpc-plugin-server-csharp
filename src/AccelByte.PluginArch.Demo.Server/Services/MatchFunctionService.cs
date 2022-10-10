@@ -108,18 +108,18 @@ namespace AccelByte.PluginArch.Demo.Server.Services
                             ));
                         }
                     }
+                }
 
-                    if (request.Ticket != null)
+                if (request.Ticket != null)
+                {
+                    _Logger.LogInformation("Received ticket");
+                    _UnmatchedTickets.Add(request.Ticket);
+                    if (_UnmatchedTickets.Count == _ShipCountMax)
                     {
-                        _Logger.LogInformation("Received ticket");
-                        _UnmatchedTickets.Add(request.Ticket);
-                        if (_UnmatchedTickets.Count == _ShipCountMax)
-                        {
-                            await CreateAndPushMatchResultAndClearUnmatchedTickets(responseStream);
-                        }
-
-                        _Logger.LogInformation("Unmatched tickets size : " + _UnmatchedTickets.Count.ToString());
+                        await CreateAndPushMatchResultAndClearUnmatchedTickets(responseStream);
                     }
+
+                    _Logger.LogInformation("Unmatched tickets size : " + _UnmatchedTickets.Count.ToString());
                 }
             }
 
@@ -129,43 +129,6 @@ namespace AccelByte.PluginArch.Demo.Server.Services
             {
                 await CreateAndPushMatchResultAndClearUnmatchedTickets(responseStream);
             }
-
-            /*while (await requestStream.MoveNext())
-            {
-                MakeMatchesRequest request = requestStream.Current;
-                if (request.Ticket.Players.Count > 0)
-                {
-                    foreach (var player in request.Ticket.Players)
-                    {
-                        MatchResponse response = new MatchResponse();
-
-                        Match.Types.Team team = new Match.Types.Team();
-                        team.UserIds.Add(player.PlayerId);
-            
-                        response.Match = new Match();
-                        response.Match.Teams.Add(team);
-
-                        await responseStream.WriteAsync(response);
-                    }
-                }
-            }*/
-
-            /*await foreach (MakeMatchesRequest request in requestStream.ReadAllAsync())
-            {
-                if (request.Ticket.Players.Count > 0)
-                {
-                    var player = request.Ticket.Players[0];
-                    MatchResponse response = new MatchResponse();
-
-                    Match.Types.Team team = new Match.Types.Team();
-                    team.UserIds.Add(player.PlayerId);
-
-                    response.Match = new Match();
-                    response.Match.Teams.Add(team);
-
-                    await responseStream.WriteAsync(response);
-                }
-            }*/
         }
     }
 }
