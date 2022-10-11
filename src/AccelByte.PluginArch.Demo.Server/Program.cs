@@ -2,20 +2,46 @@
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
+using System;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+
 using AccelByte.PluginArch.Demo.Server.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace AccelByte.PluginArch.Demo.Server
+{
+    internal class Program
+    {
+        static int Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
 
-// Additional configuration is required to successfully run gRPC on macOS.
-// For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
+            // Additional configuration is required to successfully run gRPC on macOS.
+            // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
 
-// Add services to the container.
-builder.Services.AddGrpc();
+            builder.Services.AddSingleton<IAccelByteServiceProvider, DefaultAccelByteServiceProvider>();
 
-var app = builder.Build();
+            // Add services to the container.
+            builder.Services.AddGrpc((opts) =>
+            {
+                opts.Interceptors.Add<ExceptionHandlingInterceptor>();
+                opts.Interceptors.Add<DebugLoggerServerInterceptor>();
+                opts.Interceptors.Add<AuthorizationInterceptor>();
+            });
 
-// Configure the HTTP request pipeline.
-app.MapGrpcService<MatchFunctionService>();
-app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+            var app = builder.Build();
 
-app.Run();
+            // Configure the HTTP request pipeline.
+            app.MapGrpcService<MatchFunctionService>();
+            app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+
+            // Warmup required provider.
+            app.Services.GetService<IAccelByteServiceProvider>();
+
+            app.Run();
+
+            return 0;
+        }
+    }
+}
