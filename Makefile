@@ -4,10 +4,12 @@
 
 SHELL := /bin/bash
 
+DOTNETVER := 6.0.302
+
 .PHONY: build test
 
 build:
-	docker run --rm -u $$(id -u):$$(id -g) -v $$(pwd)/src:/data/ -w /data/ -e DOTNET_CLI_HOME="/data" mcr.microsoft.com/dotnet/sdk:6.0 dotnet build
+	docker run --rm -u $$(id -u):$$(id -g) -v $$(pwd)/src:/data/ -w /data/ -e HOME="/data" -e DOTNET_CLI_HOME="/data" mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) dotnet build
 
 test:
-	docker run --rm -u $$(id -u):$$(id -g) -v $$(pwd)/src:/data/ -w /data/ -e DOTNET_CLI_HOME="/data" mcr.microsoft.com/dotnet/sdk:6.0 dotnet test
+	docker run --rm -u $$(id -u):$$(id -g) -v $$(pwd)/src:/data/ -w /data/ -e HOME="/data" -e DOTNET_CLI_HOME="/data" mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) dotnet test
