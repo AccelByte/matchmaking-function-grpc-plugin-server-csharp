@@ -1,0 +1,89 @@
+version: '3.5'
+networks:
+  plugin-arch-server-net:
+    name: plugin-arch-server-net
+    external: false
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.37.0
+    ports:
+      - 16686:16686
+      - 14250:14250
+    networks:
+      - plugin-arch-server-net
+
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./conf.d/tempo.yaml:/etc/tempo.yaml
+    networks:
+      - plugin-arch-server-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus.yaml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./conf.d/prometheus.yaml:/etc/prometheus.yaml
+    ports:
+      - 9090:9090
+    networks:
+      - plugin-arch-server-net
+  
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.58.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./conf.d/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - 9411:9411   # Zipkin receiver
+      - 4317:4317   # OTLP Grpc receiver
+      - 4318:4318   # OTLP Http receiver
+    networks:
+      - plugin-arch-server-net
+
+  grafana:
+    image: grafana/grafana:9.1.6
+    volumes:
+      - ./conf.d/grafana-ds.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - 3000:3000
+    networks:
+      - plugin-arch-server-net
+
+  fluentd-loki:
+    image: grafana/fluent-plugin-loki:master  # based on 1.9 and not having the updated http plugin for json-array
+    command: ["-v"]
+    volumes:
+      - ./conf.d/fluent-loki.conf:/fluentd/etc/fluent.conf
+    ports:
+      - 24225:24225
+      - "24225:24225/udp"
+    networks:
+      - plugin-arch-server-net
+
+  loki:
+    image: grafana/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./conf.d/loki-config.yaml:/etc/loki/local-config.yaml
+    networks:
+      - plugin-arch-server-net
+
+  envoy:
+    image: envoyproxy/envoy:v1.22.5
+    command: ["--service-cluster", "envoyproxy", "--config-path", "/etc/envoy/envoy.yaml"]
+    ports:
+      - 10000:10000
+    volumes:
+      - ./conf.d/envoy.yaml:/etc/envoy/envoy.yaml
+    networks:
+      plugin-arch-server-net:

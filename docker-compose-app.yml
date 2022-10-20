@@ -1,0 +1,21 @@
+version: '3.5'
+networks:
+  plugin-arch-server-net:
+    name: plugin-arch-server-net
+    external: true
+
+services:
+  app-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    networks:
+      plugin-arch-server-net:
+#    logging:
+#      driver: fluentd
+#      options:
+#        fluentd-address: "fluentd-loki:24225"
+#        fluentd-async-connect: "true"
+#        tag: docker
