@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 using AccelByte.PluginArch.Demo.Server.Services;
+using Microsoft.Extensions.Hosting;
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -27,14 +28,20 @@ namespace AccelByte.PluginArch.Demo.Server
             {
                 opts.Interceptors.Add<ExceptionHandlingInterceptor>();
                 opts.Interceptors.Add<DebugLoggerServerInterceptor>();
-                opts.Interceptors.Add<AuthorizationInterceptor>();
+                //opts.Interceptors.Add<AuthorizationInterceptor>();
             });
+            builder.Services.AddGrpcReflection();
 
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             app.MapGrpcService<MatchFunctionService>();
-            app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+            //app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+
+            if (app.Environment.IsDevelopment())
+            {
+                app.MapGrpcReflectionService();
+            }
 
             // Warmup required provider.
             app.Services.GetService<IAccelByteServiceProvider>();
