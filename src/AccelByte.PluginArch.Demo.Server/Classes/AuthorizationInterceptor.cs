@@ -41,11 +41,11 @@ namespace AccelByte.PluginArch.Demo.Server
             {
                 string? authToken = context.RequestHeaders.GetValue("authorization");
                 if (authToken == null)
-                    throw new Exception("No authorization token provided.");
+                    throw new RpcException(new Status(StatusCode.Unauthenticated, "No authorization token provided."));
 
                 string[] authParts = authToken.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
                 if (authParts.Length != 2)
-                    throw new Exception("Invalid authorization token format");
+                    throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid authorization token format"));
 
                 string accessToken = authParts[1];
 
@@ -53,13 +53,13 @@ namespace AccelByte.PluginArch.Demo.Server
                     .SetPreferredSecurityMethod(Operation.SECURITY_BASIC)
                     .Execute(authParts[1]);
                 if (verifyResponse == null)
-                    throw new Exception("Invalid authorization token value.");
+                    throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid authorization token value."));
 
                 string qPermission = $"NAMESPACE:{_Namespace}:{_ResourceName}";
 
                 var permissionList = verifyResponse.Permissions;
                 if (permissionList == null)
-                    throw new Exception("Unauthorized call.");
+                    throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized call."));
 
                 bool foundMatchingPermission = false;
                 foreach (var permission in permissionList)
@@ -72,7 +72,7 @@ namespace AccelByte.PluginArch.Demo.Server
                 }
 
                 if (!foundMatchingPermission)
-                    throw new Exception("Unauthorized call");
+                    throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized call."));
 
                 return await continuation(request, context);
             }
