@@ -16,8 +16,10 @@ exporters:
     endpoint: tempo:4317
     tls:
       insecure: true
-  prometheus:
-    endpoint: "0.0.0.0:1234"
+  prometheusremotewrite:
+    endpoint: "http://prometheus:9090/api/v1/write"
+    tls:
+      insecure: true
 
 processors:
   batch:
@@ -53,7 +55,7 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging,prometheus]
+      exporters: [logging,prometheusremotewrite]
     logs:
       receivers: [otlp]
       processors: [batch]

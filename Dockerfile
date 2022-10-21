@@ -17,7 +17,5 @@ RUN cp -r /app-build/out/* ./
 
 RUN chmod 0777 /app/AccelByte.PluginArch.Demo.Server
 
-RUN ls -lha /app
-
 EXPOSE 5500
 ENTRYPOINT ["/app/AccelByte.PluginArch.Demo.Server"]
