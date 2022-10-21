@@ -3,12 +3,19 @@
 // and restrictions contact your company contract manager.
 
 using System;
+using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 
 using AccelByte.PluginArch.Demo.Server.Services;
-using Microsoft.Extensions.Hosting;
+
+using OpenTelemetry;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -17,26 +24,49 @@ namespace AccelByte.PluginArch.Demo.Server
         static int Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
-            // Additional configuration is required to successfully run gRPC on macOS.
-            // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
+            builder.Configuration.AddEnvironmentVariables("ABSERVER_");
 
             builder.Services.AddSingleton<IAccelByteServiceProvider, DefaultAccelByteServiceProvider>();
 
-            // Add services to the container.
+            //Get Config
+            AppSettingConfigRepository appConfig = builder.Configuration.GetSection("AccelByte").Get<AppSettingConfigRepository>();
+            bool enableAuthorization = builder.Configuration.GetValue<bool>("EnableAuthorization");
+
+            builder.Services.AddOpenTelemetryTracing((traceConfig) =>
+            {
+                var asVersion = Assembly.GetEntryAssembly()!.GetName().Version;
+                string version = "0.0.0";
+                if (asVersion != null)
+                    version = asVersion.ToString();
+
+                traceConfig
+                    .AddSource(appConfig.ResourceName)
+                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(appConfig.ResourceName, null, version))
+                    //.AddConsoleExporter()
+                    .AddOtlpExporter((opt) =>
+                    {
+                        //Use Grpc, HttpProtobuf is buggy when use pre-defined endpoint.
+                        opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                    })
+                    .AddHttpClientInstrumentation()
+                    .AddAspNetCoreInstrumentation();
+            });
+
+            // Additional configuration is required to successfully run gRPC on macOS.
+            // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
+            
             builder.Services.AddGrpc((opts) =>
             {
                 opts.Interceptors.Add<ExceptionHandlingInterceptor>();
                 opts.Interceptors.Add<DebugLoggerServerInterceptor>();
-                //opts.Interceptors.Add<AuthorizationInterceptor>();
+                if (enableAuthorization)
+                    opts.Interceptors.Add<AuthorizationInterceptor>();
             });
             builder.Services.AddGrpcReflection();
 
             var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
+            
             app.MapGrpcService<MatchFunctionService>();
-            //app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
             if (app.Environment.IsDevelopment())
             {
