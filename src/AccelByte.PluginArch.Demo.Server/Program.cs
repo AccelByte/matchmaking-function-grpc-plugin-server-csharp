@@ -43,11 +43,7 @@ namespace AccelByte.PluginArch.Demo.Server
                     .AddSource(appConfig.ResourceName)
                     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(appConfig.ResourceName, null, version))
                     //.AddConsoleExporter()
-                    .AddOtlpExporter((opt) =>
-                    {
-                        //Use Grpc, HttpProtobuf is buggy when use pre-defined endpoint.
-                        opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-                    })
+                    .AddZipkinExporter()
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation();
             });

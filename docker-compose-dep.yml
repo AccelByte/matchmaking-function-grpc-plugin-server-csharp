@@ -40,9 +40,7 @@ services:
     volumes:
       - ./conf.d/otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
-      - 9411:9411   # Zipkin receiver
-      - 4317:4317   # OTLP Grpc receiver
-      - 4318:4318   # OTLP Http receiver
+      - 9411:9411
     depends_on:
       - tempo
       - jaeger
@@ -65,18 +63,7 @@ services:
       - loki
     networks:
       - plugin-arch-server-net
-
-  fluentd-loki:
-    image: grafana/fluent-plugin-loki:master  # based on 1.9 and not having the updated http plugin for json-array
-    command: ["-v"]
-    volumes:
-      - ./conf.d/fluent-loki.conf:/fluentd/etc/fluent.conf
-    ports:
-      - 24225:24225
-      - "24225:24225/udp"
-    networks:
-      - plugin-arch-server-net
-
+  
   loki:
     image: grafana/loki
     command: -config.file=/etc/loki/local-config.yaml

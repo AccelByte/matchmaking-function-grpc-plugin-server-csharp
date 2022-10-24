@@ -1,9 +1,5 @@
 receivers:
   zipkin:
-  otlp:
-    protocols:
-      grpc:
-      http:
 
 exporters:  
   logging:
@@ -49,14 +45,6 @@ service:
       level: "info"
   pipelines:
     traces:
-      receivers: [zipkin,otlp]
-      processors: [batch]
+      receivers: [zipkin]
+      processors: [batch,tail_sampling]
       exporters: [logging,jaeger,otlp/tempo]
-    metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [logging,prometheusremotewrite]
-    logs:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [logging]
