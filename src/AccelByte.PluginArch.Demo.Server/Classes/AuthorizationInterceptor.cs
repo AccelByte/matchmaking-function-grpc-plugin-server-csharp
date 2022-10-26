@@ -79,7 +79,7 @@ namespace AccelByte.PluginArch.Demo.Server
             catch (Exception x)
             {
                 _Logger.LogError(x, $"Authorization error: {x.Message}");
-                throw;
+                throw new RpcException(new Status(StatusCode.Unauthenticated, x.Message));
             }
         }
     }
