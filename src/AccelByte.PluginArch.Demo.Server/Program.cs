@@ -15,7 +15,9 @@ using AccelByte.PluginArch.Demo.Server.Services;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-
+using OpenTelemetry.Extensions;
+using OpenTelemetry.Extensions.Propagators;
+using System.Diagnostics;
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -23,6 +25,9 @@ namespace AccelByte.PluginArch.Demo.Server
     {
         static int Main(string[] args)
         {
+            //Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+            OpenTelemetry.Sdk.SetDefaultTextMapPropagator(new B3Propagator());
+
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddEnvironmentVariables("ABSERVER_");
 
@@ -45,7 +50,10 @@ namespace AccelByte.PluginArch.Demo.Server
                     //.AddConsoleExporter()
                     .AddZipkinExporter()
                     .AddHttpClientInstrumentation()
-                    .AddAspNetCoreInstrumentation();
+                    .AddAspNetCoreInstrumentation((ancOpt) =>
+                    {
+
+                    });
             });
 
             // Additional configuration is required to successfully run gRPC on macOS.
