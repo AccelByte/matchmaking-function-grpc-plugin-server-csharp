@@ -1,5 +1,6 @@
 version: '3.5'
 networks:
+  default:
   plugin-arch-server-net:
     name: plugin-arch-server-net
     external: false
@@ -45,6 +46,7 @@ services:
       - tempo
       - jaeger
     networks:
+      - default
       - plugin-arch-server-net
 
   grafana:

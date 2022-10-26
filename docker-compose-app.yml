@@ -11,7 +11,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://otel-collector:9411 # Zipkin
+      - OTEL_EXPORTER_ZIPKIN_ENDPOINT=http://otel-collector:9411/api/v2/spans # Zipkin
     networks:
       plugin-arch-server-net:
     logging:
