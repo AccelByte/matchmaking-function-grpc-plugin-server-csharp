@@ -20,7 +20,7 @@ namespace AccelByte.PluginArch.Demo.Server.Model
             {
                 public class Role
                 {
-                    [JsonPropertyName("Camespace")]
+                    [JsonPropertyName("Namespace")]
                     public string Namespace { get; set; } = String.Empty;
 
                     [JsonPropertyName("RoleId")]
