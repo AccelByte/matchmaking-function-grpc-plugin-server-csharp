@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IdentityModel.Tokens.Jwt;
 
 using AccelByte.Sdk.Core;
 
@@ -9,5 +10,9 @@ namespace AccelByte.PluginArch.Demo.Server
         AccelByteSDK Sdk { get; }
 
         AppSettingConfigRepository Config { get; }
+
+        JwtSecurityToken ValidateAccessToken(string accessToken);
+
+        void RefreshRevocationList();
     }
 }

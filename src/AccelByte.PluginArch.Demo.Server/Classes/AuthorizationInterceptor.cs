@@ -4,6 +4,8 @@
 
 using System;
 using System.Threading.Tasks;
+using System.Security.Cryptography.Xml;
+using System.IdentityModel.Tokens.Jwt;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
@@ -13,7 +15,7 @@ using Grpc.Core.Interceptors;
 
 using AccelByte.Sdk.Core;
 using AccelByte.Sdk.Api;
-using System.Security.Cryptography.Xml;
+using AccelByte.PluginArch.Demo.Server.Model.AccelByte.PluginArch.Demo.Server.Model;
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -21,7 +23,7 @@ namespace AccelByte.PluginArch.Demo.Server
     {
         private readonly ILogger<AuthorizationInterceptor> _Logger;
 
-        private readonly AccelByteSDK _ABSdk;
+        private readonly IAccelByteServiceProvider _ABProvider;
 
         private readonly string _Namespace;
 
@@ -30,13 +32,15 @@ namespace AccelByte.PluginArch.Demo.Server
         public AuthorizationInterceptor(ILogger<AuthorizationInterceptor> logger, IAccelByteServiceProvider abSdkProvider)
         {
             _Logger = logger;
-            _ABSdk = abSdkProvider.Sdk;
+            _ABProvider = abSdkProvider;
             _Namespace = abSdkProvider.Config.Namespace;
             _ResourceName = abSdkProvider.Config.ResourceName;
         }
 
         public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
         {
+            string qPermission = $"NAMESPACE:{_Namespace}:{_ResourceName}";
+
             try
             {
                 string? authToken = context.RequestHeaders.GetValue("authorization");
@@ -47,28 +51,20 @@ namespace AccelByte.PluginArch.Demo.Server
                 if (authParts.Length != 2)
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid authorization token format"));
 
-                string accessToken = authParts[1];
+                JwtSecurityToken token = _ABProvider.ValidateAccessToken(authParts[1]);
+                AccessTokenPayload payload = AccessTokenPayload.FromToken(token);
 
-                var verifyResponse = _ABSdk.Iam.OAuth20.VerifyTokenV3Op
-                    .SetPreferredSecurityMethod(Operation.SECURITY_BASIC)
-                    .Execute(authParts[1]);
-                if (verifyResponse == null)
-                    throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid authorization token value."));
-
-                string qPermission = $"NAMESPACE:{_Namespace}:{_ResourceName}";
-
-                var permissionList = verifyResponse.Permissions;
-                if (permissionList == null)
-                    throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized call."));
+                if (payload.Permissions == null)
+                    throw new RpcException(new Status(StatusCode.PermissionDenied, "No permission(s) assigned."));
 
                 bool foundMatchingPermission = false;
-                foreach (var permission in permissionList)
+                foreach (var permission in payload.Permissions)
                 {
                     if (permission.Resource == qPermission)
                     {
                         foundMatchingPermission = true;
                         break;
-                    }   
+                    }
                 }
 
                 if (!foundMatchingPermission)

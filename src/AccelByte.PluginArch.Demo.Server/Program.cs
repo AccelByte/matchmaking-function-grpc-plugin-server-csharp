@@ -25,13 +25,14 @@ namespace AccelByte.PluginArch.Demo.Server
     {
         static int Main(string[] args)
         {
-            //Activity.DefaultIdFormat = ActivityIdFormat.W3C;
             OpenTelemetry.Sdk.SetDefaultTextMapPropagator(new B3Propagator());
 
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddEnvironmentVariables("ABSERVER_");
 
             builder.Services.AddSingleton<IAccelByteServiceProvider, DefaultAccelByteServiceProvider>();
+            //builder.Services.AddSingleton<RevocationListRefresher>();
+            builder.Services.AddHostedService<RevocationListRefresher>();
 
             //Get Config
             AppSettingConfigRepository appConfig = builder.Configuration.GetSection("AccelByte").Get<AppSettingConfigRepository>();
@@ -50,10 +51,7 @@ namespace AccelByte.PluginArch.Demo.Server
                     //.AddConsoleExporter()
                     .AddZipkinExporter()
                     .AddHttpClientInstrumentation()
-                    .AddAspNetCoreInstrumentation((ancOpt) =>
-                    {
-
-                    });
+                    .AddAspNetCoreInstrumentation();
             });
 
             // Additional configuration is required to successfully run gRPC on macOS.
