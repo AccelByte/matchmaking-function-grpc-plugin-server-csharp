@@ -4,20 +4,22 @@
 
 using System;
 using System.Reflection;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 
-using AccelByte.PluginArch.Demo.Server.Services;
-
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Extensions;
 using OpenTelemetry.Extensions.Propagators;
-using System.Diagnostics;
+
+using AccelByte.PluginArch.Demo.Server.Services;
+using AccelByte.PluginArch.Demo.Server.Metric;
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -31,28 +33,38 @@ namespace AccelByte.PluginArch.Demo.Server
             builder.Configuration.AddEnvironmentVariables("ABSERVER_");
 
             builder.Services.AddSingleton<IAccelByteServiceProvider, DefaultAccelByteServiceProvider>();
-            //builder.Services.AddSingleton<RevocationListRefresher>();
             builder.Services.AddHostedService<RevocationListRefresher>();
 
             //Get Config
             AppSettingConfigRepository appConfig = builder.Configuration.GetSection("AccelByte").Get<AppSettingConfigRepository>();
             bool enableAuthorization = builder.Configuration.GetValue<bool>("EnableAuthorization");
 
-            builder.Services.AddOpenTelemetryTracing((traceConfig) =>
-            {
-                var asVersion = Assembly.GetEntryAssembly()!.GetName().Version;
-                string version = "0.0.0";
-                if (asVersion != null)
-                    version = asVersion.ToString();
+            builder.Services
+                .AddOpenTelemetryTracing((traceConfig) =>
+                {
+                    var asVersion = Assembly.GetEntryAssembly()!.GetName().Version;
+                    string version = "0.0.0";
+                    if (asVersion != null)
+                        version = asVersion.ToString();
 
-                traceConfig
-                    .AddSource(appConfig.ResourceName)
-                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(appConfig.ResourceName, null, version))
-                    //.AddConsoleExporter()
-                    .AddZipkinExporter()
-                    .AddHttpClientInstrumentation()
-                    .AddAspNetCoreInstrumentation();
-            });
+                    traceConfig
+                        .AddSource(appConfig.ResourceName)
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                            .AddService(appConfig.ResourceName, null, version)
+                            .AddTelemetrySdk())
+                        //.AddConsoleExporter()
+                        .AddZipkinExporter()
+                        .AddHttpClientInstrumentation()
+                        .AddAspNetCoreInstrumentation();
+                })
+                .AddOpenTelemetryMetrics((metricConfig) =>
+                {
+                    metricConfig
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddRequestLatencyMetric()
+                        .AddPrometheusExporter();
+                });
 
             // Additional configuration is required to successfully run gRPC on macOS.
             // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
@@ -67,19 +79,17 @@ namespace AccelByte.PluginArch.Demo.Server
             builder.Services.AddGrpcReflection();
 
             var app = builder.Build();
+
+
             
             app.MapGrpcService<MatchFunctionService>();
-
             if (app.Environment.IsDevelopment())
             {
                 app.MapGrpcReflectionService();
             }
 
-            // Warmup required provider.
-            app.Services.GetService<IAccelByteServiceProvider>();
-
+            app.UseOpenTelemetryPrometheusScrapingEndpoint();
             app.Run();
-
             return 0;
         }
     }
