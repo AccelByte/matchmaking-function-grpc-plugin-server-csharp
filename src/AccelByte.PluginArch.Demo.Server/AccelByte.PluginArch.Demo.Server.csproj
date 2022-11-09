@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AccelByte.Sdk" Version="0.20.0" />
+    <PackageReference Include="AccelByte.Sdk" Version="0.21.0" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.49.0" />
     <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.49.0" />
     <PackageReference Include="HdrHistogram" Version="2.5.0" />
@@ -25,6 +25,8 @@
     <PackageReference Include="OpenTelemetry.Extensions.Propagators" Version="1.4.0-beta.2" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc9.8" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0-rc9.8" />
+    <PackageReference Include="Serilog.AspNetCore" Version="6.0.1" />
+    <PackageReference Include="Serilog.Sinks.Grafana.Loki" Version="8.0.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.25.0" />
   </ItemGroup>
 
