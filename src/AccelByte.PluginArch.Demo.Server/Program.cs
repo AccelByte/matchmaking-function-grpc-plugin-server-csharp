@@ -3,6 +3,7 @@
 // and restrictions contact your company contract manager.
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 using Microsoft.AspNetCore.Builder;
@@ -18,8 +19,15 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Extensions;
 using OpenTelemetry.Extensions.Propagators;
 
+using Serilog;
+using Serilog.Formatting.Compact;
+
 using AccelByte.PluginArch.Demo.Server.Services;
 using AccelByte.PluginArch.Demo.Server.Metric;
+using Serilog.Events;
+using Serilog.Sinks.Grafana.Loki;
+using System.Net.Http;
+using System.Net;
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -32,14 +40,42 @@ namespace AccelByte.PluginArch.Demo.Server
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddEnvironmentVariables("ABSERVER_");
 
-            builder.Services.AddSingleton<IAccelByteServiceProvider, DefaultAccelByteServiceProvider>();
-            builder.Services.AddHostedService<RevocationListRefresher>();
-
             //Get Config
             AppSettingConfigRepository appConfig = builder.Configuration.GetSection("AccelByte").Get<AppSettingConfigRepository>();
             bool enableAuthorization = builder.Configuration.GetValue<bool>("EnableAuthorization");
+            bool directLogToLoki = builder.Configuration.GetValue<bool>("DirectLogToLoki");
+
+            if (directLogToLoki)
+            {
+                string? srLokiUrl = Environment.GetEnvironmentVariable("ASPNETCORE_SERILOG_LOKI");
+                if (srLokiUrl == null)
+                    srLokiUrl = builder.Configuration.GetValue<string>("LokiUrl");
+
+                builder.Host.UseSerilog((ctx, cfg) =>
+                {
+                    cfg.MinimumLevel
+                        .Override("Microsoft", LogEventLevel.Information)
+                        .Enrich.FromLogContext()
+                        .WriteTo.GrafanaLoki(srLokiUrl,new List<LokiLabel>()
+                        {
+                            new LokiLabel()
+                            {
+                                Key = "application",
+                                Value = appConfig.ResourceName
+                            },
+                            new LokiLabel()
+                            {
+                                Key = "env",
+                                Value = ctx.HostingEnvironment.EnvironmentName
+                            }
+                        })
+                        .WriteTo.Console(new RenderedCompactJsonFormatter());
+                });
+            }
 
             builder.Services
+                .AddSingleton<IAccelByteServiceProvider, DefaultAccelByteServiceProvider>()
+                .AddHostedService<RevocationListRefresher>()
                 .AddOpenTelemetryTracing((traceConfig) =>
                 {
                     var asVersion = Assembly.GetEntryAssembly()!.GetName().Version;
@@ -52,7 +88,6 @@ namespace AccelByte.PluginArch.Demo.Server
                         .SetResourceBuilder(ResourceBuilder.CreateDefault()
                             .AddService(appConfig.ResourceName, null, version)
                             .AddTelemetrySdk())
-                        //.AddConsoleExporter()
                         .AddZipkinExporter()
                         .AddHttpClientInstrumentation()
                         .AddAspNetCoreInstrumentation();
@@ -79,7 +114,7 @@ namespace AccelByte.PluginArch.Demo.Server
             builder.Services.AddGrpcReflection();
 
             var app = builder.Build();
-
+            
 
             
             app.MapGrpcService<MatchFunctionService>();
