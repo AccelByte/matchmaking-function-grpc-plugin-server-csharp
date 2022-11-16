@@ -40,6 +40,11 @@ namespace AccelByte.PluginArch.Demo.Server
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddEnvironmentVariables("ABSERVER_");
 
+            builder.WebHost.ConfigureKestrel(opt =>
+            {
+                opt.AllowAlternateSchemes = true;
+            });
+
             //Get Config
             AppSettingConfigRepository appConfig = builder.Configuration.GetSection("AccelByte").Get<AppSettingConfigRepository>();
             bool enableAuthorization = builder.Configuration.GetValue<bool>("EnableAuthorization");
