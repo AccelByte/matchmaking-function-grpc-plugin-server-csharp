@@ -1,44 +1,92 @@
-# AccelByte Plugin Architecture Demo using C# (.NET) [Server Part]
+# plugin-arch-grpc-server-csharp
+
+> :warning: **If you are new to AccelByte Cloud Service Customization gRPC Plugin Architecture**: Start reading from `OVERVIEW.md` in `plugin-arch-grpc-dependencies` repository to get the full context.
+
+Justice service customization using gRPC plugin architecture - Server (C#).
+
+## Prerequisites
+
+1. Windows 10 WSL2 or Linux Ubuntu 20.04 with the following tools installed.
+
+    a. bash
+
+    b. docker
+
+    c. docker-compose
+
+    d. make
+
+    e. .net 6 sdk
+
+2. AccelByte Cloud demo environment.
+
+    a. Base URL: https://demo.accelbyte.io.
+
+    b. [Create a Game Namespace](https://docs.accelbyte.io/esg/uam/namespaces.html#tutorials) if you don't have one yet. Keep the `Namespace ID`.
+
+    c. [Create an OAuth Client](https://docs.accelbyte.io/guides/access/iam-client.html) with confidential client type and give it `read` permission to resource `NAMESPACE:{namespace}:MMV2GRPCSERVICE`. Keep the `Client ID` and `Client Secret`.
 
 ## Setup
-1. For complete server components to work, you need `docker` and `docker-compose` to be installed.
-2. Install docker logging driver for loki with this command:
-    ```bash
-    $ docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
-    ```
-3. You can verify whether loki driver has been installed using:
-    ```bash
-    $ docker plugin ls
-    ```
-4. .NET 6.0 SDK is required to build and run outside of docker environment.
 
-## Usage
+Create `src/AccelByte.PluginArch.Demo.Server/appsettings.Development.json` and fill in the required configuration.
 
-1. Clone `src/AccelByte.PluginArch.Demo.Server/appsettings.json` to `src/AccelByte.PluginArch.Demo.Server/appsettings.Development.json`
-    ```bash
-    $ cp src/AccelByte.PluginArch.Demo.Server/appsettings.json src/AccelByte.PluginArch.Demo.Server/appsettings.Development.json
-    ```
-2. Open `appsettings.Development.json` file and change the configuration values according to your needs. Make sure all `AccelByte` fields are not empty.
-3. Run dependencies first.
-    ```bash
-    $ docker-compose -f docker-compose-dep.yml up
-    ```
-4. Then run app. Use `--build` if the app image need to be rebuild. For example when there are changes in configuration.
-    ```bash
-    $ docker-compose -f docker-compose-app.yml up
-    or
-    $ docker-compose -f docker-compose-app.yml up --build
-    ```
-5. Use Postman or any other Grpc client, and point it to `localhost:10000` (default). Grpc service discovery is already enabled and if client supported it, then it can be use to simplify the testing.
+```json
+{
+  "DirectLogToLoki": false,
+  "EnableAuthorization": false,
+  "RevocationListRefreshPeriod": 60,
+  "AccelByte": {
+    "BaseUrl": "https://demo.accelbyte.io",     // Base URL
+    "ClientId": "xxxxxxxxxx",                   // Client ID       
+    "ClientSecret": "xxxxxxxxxx",               // Client Secret
+    "AppName": "MMV2GRPCSERVICE",
+    "TraceIdVersion": "1",
+    "Namespace": "xxxxxxxxxx",                  // Namespace ID
+    "EnableTraceId": true,
+    "EnableUserAgentInfo": true,
+    "ResourceName": "MMV2GRPCSERVICE"
+  }
+}
+```
 
+> :exclamation: **For the server and client**: Use the same Base URL, Client ID, Client Secret, and Namespace ID.
 
-## Configuration
+## Building
+
+Build the project and create a docker image for the current platform in one go.
+
+```
+make build image
+```
+
+For more details about the command, see [Makefile](Makefile).
+
+## Running
+
+Use the following command to run the project.
+
+```
+docker-compose up
+```
+
+## Advanced
+
+### Building Multi-Arch Docker Image
+
+Build the project and create a multi-arch docker image in one go.
+
+```
+make build imagex
+```
+
+## Advanced
 
 ### appsettings.*.json
-|key|description|default|
+
+|Key|Description|Default|
 |-|-|-|
 |Kestrel.Endpoints.Http.Url|Prometheus scrapper endpoint|http://0.0.0.0:8080|
-|Kestrel.Endpoints.Grpc.Url|Grpc service endpoint|http://0.0.0.0:5500|
+|Kestrel.Endpoints.Grpc.Url|Grpc service endpoint|http://0.0.0.0:6565|
 |DirectLogToLoki|Enable sending log directly to Loki|false|
 |LokiUrl|Loki URL for sending log (can be overridden by env var)|http://localhost:3100|
 |EnableAuthorization|Enable access token validation|true|
@@ -50,8 +98,9 @@
 |AccelByte.AppName|Grpc service application name|MMV2GRPCSERVICE|
 |AccelByte.ResourceName|Grpc service resource or instance name|MMV2GRPCSERVICE|
 
-### Environment Vars in docker-compose-app.yml
-|key|description|
+### Environment variables in docker-compose.yml
+
+|Key|Description|
 |-|-|
 |ASPNETCORE_ENVIRONMENT|ASP.NET Core runtime environment. Read more about it [here](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments?view=aspnetcore-6.0). Default is `Development`. Make sure that this value match the name for appsettings json file. E.g. `Development` will read configuration value from `appsettings.Development.json` and `Production` will read configuration value from `appsettings.Production.json`.|
 |OTEL_EXPORTER_ZIPKIN_ENDPOINT|[OpenTelemetry zipkin endpoint](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry.Exporter.Zipkin/README.md).|
