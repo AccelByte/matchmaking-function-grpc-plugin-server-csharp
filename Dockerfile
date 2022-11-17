@@ -2,9 +2,6 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0-focal
 
 ARG PROJECT_SRC_PATH=src/AccelByte.PluginArch.Demo.Server
 
-RUN apt-get update -y \
-    && apt-get install -y software-properties-common
-
 WORKDIR /app-build
 COPY $PROJECT_SRC_PATH/*.csproj ./
 RUN dotnet restore
@@ -17,5 +14,5 @@ RUN cp -r /app-build/out/* ./
 
 RUN chmod 0777 /app/AccelByte.PluginArch.Demo.Server
 
-EXPOSE 5500
+EXPOSE 6565
 ENTRYPOINT ["/app/AccelByte.PluginArch.Demo.Server"]
