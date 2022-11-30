@@ -1,0 +1,5 @@
+Dockerfile
+Makefile
+.dotnet
+.local
+.nuget

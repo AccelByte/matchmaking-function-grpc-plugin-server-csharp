@@ -1,18 +1,17 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0-focal
-
-ARG PROJECT_SRC_PATH=src/AccelByte.PluginArch.Demo.Server
-
-WORKDIR /app-build
-COPY $PROJECT_SRC_PATH/*.csproj ./
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0.302 as builder
+ARG PROJECT_PATH=src/AccelByte.PluginArch.Demo.Server
+WORKDIR /build
+COPY $PROJECT_PATH/*.csproj ./
 RUN dotnet restore
+COPY $PROJECT_PATH ./
+RUN dotnet publish -c Release -o output
 
-COPY $PROJECT_SRC_PATH ./
-RUN dotnet publish -c Release -o out
-
+FROM mcr.microsoft.com/dotnet/sdk:6.0.302
 WORKDIR /app
-RUN cp -r /app-build/out/* ./
-
-RUN chmod 0777 /app/AccelByte.PluginArch.Demo.Server
-
+COPY --from=builder /build/output/* ./
+RUN chmod +x /app/AccelByte.PluginArch.Demo.Server
+# Plugin arch gRPC server port
 EXPOSE 6565
+# Prometheus /metrics web server port
+EXPOSE 8080
 ENTRYPOINT ["/app/AccelByte.PluginArch.Demo.Server"]
