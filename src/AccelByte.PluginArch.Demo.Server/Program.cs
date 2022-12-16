@@ -5,6 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Net;
+using System.Net.Http;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -21,13 +23,13 @@ using OpenTelemetry.Extensions.Propagators;
 
 using Serilog;
 using Serilog.Formatting.Compact;
+using Serilog.Events;
+using Serilog.Sinks.Grafana.Loki;
+
+using Prometheus;
 
 using AccelByte.PluginArch.Demo.Server.Services;
 using AccelByte.PluginArch.Demo.Server.Metric;
-using Serilog.Events;
-using Serilog.Sinks.Grafana.Loki;
-using System.Net.Http;
-using System.Net;
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -36,6 +38,10 @@ namespace AccelByte.PluginArch.Demo.Server
         static int Main(string[] args)
         {
             OpenTelemetry.Sdk.SetDefaultTextMapPropagator(new B3Propagator());
+            Metrics.DefaultRegistry.SetStaticLabels(new Dictionary<string, string>()
+            {
+                { "application", "mm_grpcserver" }
+            });
 
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddEnvironmentVariables("ABSERVER_");
@@ -96,15 +102,7 @@ namespace AccelByte.PluginArch.Demo.Server
                         .AddZipkinExporter()
                         .AddHttpClientInstrumentation()
                         .AddAspNetCoreInstrumentation();
-                })
-                .AddOpenTelemetryMetrics((metricConfig) =>
-                {
-                    metricConfig
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddRequestLatencyMetric()
-                        .AddPrometheusExporter();
-                });
+                });                
 
             // Additional configuration is required to successfully run gRPC on macOS.
             // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
@@ -119,6 +117,7 @@ namespace AccelByte.PluginArch.Demo.Server
             builder.Services.AddGrpcReflection();
 
             var app = builder.Build();
+            app.UseGrpcMetrics();
             
 
             
@@ -128,7 +127,7 @@ namespace AccelByte.PluginArch.Demo.Server
                 app.MapGrpcReflectionService();
             }
 
-            app.UseOpenTelemetryPrometheusScrapingEndpoint();
+            app.MapMetrics();
             app.Run();
             return 0;
         }
