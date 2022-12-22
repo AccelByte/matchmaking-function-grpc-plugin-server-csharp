@@ -3,3 +3,4 @@ Makefile
 .dotnet
 .local
 .nuget
+.env
