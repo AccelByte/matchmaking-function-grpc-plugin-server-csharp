@@ -4,7 +4,7 @@
 
 SHELL := /bin/bash
 
-IMAGE_NAME := plugin-arch-grpc-server-csharp-app
+IMAGE_NAME := $(shell basename "$$(pwd)")-app
 DOTNETVER := 6.0.302
 
 .PHONY: build image imagex test
