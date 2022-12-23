@@ -73,7 +73,7 @@ namespace AccelByte.PluginArch.Demo.Server.Services
         {
             ValidateTicketResponse response = new ValidateTicketResponse()
             {
-                Valid = true
+                ValidTicket = true
             };
 
             return Task.FromResult(response);

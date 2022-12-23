@@ -50,7 +50,7 @@ namespace AccelByte.PluginArch.Demo.Tests
             var service = new MatchFunctionService(_MMS_Logger);
             var response = await service.ValidateTicket(new ValidateTicketRequest(), new UnitTestCallContext());
 
-            Assert.IsTrue(response.Valid);
+            Assert.IsTrue(response.ValidTicket);
         }
 
         [Test]
