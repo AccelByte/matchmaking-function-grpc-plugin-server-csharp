@@ -13,7 +13,7 @@ using NUnit.Framework;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-using AccelByte.MatchFunctionGrpc;
+using AccelByte.MatchmakingV2.MatchFunction;
 using AccelByte.PluginArch.Demo.Server.Services;
 using AccelByte.PluginArch.Demo.Server.Model;
 

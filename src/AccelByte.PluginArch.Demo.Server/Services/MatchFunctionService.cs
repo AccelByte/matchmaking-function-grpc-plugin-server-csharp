@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 
 using Grpc.Core;
-using AccelByte.MatchFunctionGrpc;
+using AccelByte.MatchmakingV2.MatchFunction;
 using AccelByte.PluginArch.Demo.Server.Model;
 
 namespace AccelByte.PluginArch.Demo.Server.Services
