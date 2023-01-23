@@ -15,7 +15,7 @@ using Grpc.Core.Interceptors;
 
 using AccelByte.Sdk.Core;
 using AccelByte.Sdk.Api;
-using AccelByte.PluginArch.Demo.Server.Model.AccelByte.PluginArch.Demo.Server.Model;
+using AccelByte.Sdk.Feature.LocalTokenValidation;
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -51,24 +51,9 @@ namespace AccelByte.PluginArch.Demo.Server
                 if (authParts.Length != 2)
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid authorization token format"));
 
-                JwtSecurityToken token = _ABProvider.ValidateAccessToken(authParts[1]);
-                AccessTokenPayload payload = AccessTokenPayload.FromToken(token);
-
-                if (payload.Permissions == null)
-                    throw new RpcException(new Status(StatusCode.PermissionDenied, "No permission(s) assigned."));
-
-                bool foundMatchingPermission = false;
-                foreach (var permission in payload.Permissions)
-                {
-                    if (permission.Resource == qPermission)
-                    {
-                        foundMatchingPermission = true;
-                        break;
-                    }
-                }
-
-                if (!foundMatchingPermission)
-                    throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized call."));
+                bool b = _ABProvider.Sdk.ValidateToken(authParts[1], qPermission, 2);
+                if (!b)
+                    throw new Exception("validation failed");
 
                 return await continuation(request, context);
             }

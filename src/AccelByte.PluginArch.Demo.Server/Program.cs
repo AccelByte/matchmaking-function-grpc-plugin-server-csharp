@@ -86,7 +86,6 @@ namespace AccelByte.PluginArch.Demo.Server
 
             builder.Services
                 .AddSingleton<IAccelByteServiceProvider, DefaultAccelByteServiceProvider>()
-                .AddHostedService<RevocationListRefresher>()
                 .AddOpenTelemetryTracing((traceConfig) =>
                 {
                     var asVersion = Assembly.GetEntryAssembly()!.GetName().Version;

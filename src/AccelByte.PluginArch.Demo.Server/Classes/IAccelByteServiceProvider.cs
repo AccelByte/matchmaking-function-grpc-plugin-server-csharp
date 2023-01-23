@@ -9,10 +9,6 @@ namespace AccelByte.PluginArch.Demo.Server
     {
         AccelByteSDK Sdk { get; }
 
-        AppSettingConfigRepository Config { get; }
-
-        JwtSecurityToken ValidateAccessToken(string accessToken);
-
-        void RefreshRevocationList();
+        AppSettingConfigRepository Config { get; }        
     }
 }
