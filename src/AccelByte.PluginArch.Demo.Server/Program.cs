@@ -11,6 +11,7 @@ using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 
@@ -106,6 +107,9 @@ namespace AccelByte.PluginArch.Demo.Server
             // Additional configuration is required to successfully run gRPC on macOS.
             // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682
             
+            builder.Services.AddGrpcHealthChecks()
+                            .AddCheck("Health", () => HealthCheckResult.Healthy());
+
             builder.Services.AddGrpc((opts) =>
             {
                 opts.Interceptors.Add<ExceptionHandlingInterceptor>();
@@ -126,6 +130,7 @@ namespace AccelByte.PluginArch.Demo.Server
                 app.MapGrpcReflectionService();
             }
 
+            app.MapGrpcHealthChecksService();
             app.MapMetrics();
             app.Run();
             return 0;
