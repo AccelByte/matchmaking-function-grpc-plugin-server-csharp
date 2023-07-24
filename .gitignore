@@ -32,3 +32,6 @@ Thumbs.db
 .nuget
 .vscode
 /.vs
+
+# Local Env File
+.env

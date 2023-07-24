@@ -1,25 +1,16 @@
-﻿using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Security.Cryptography;
-using System.IdentityModel.Tokens.Jwt;
+﻿// Copyright (c) 2022-2023 AccelByte Inc. All Rights Reserved.
+// This is licensed software from AccelByte Inc, for limitations
+// and restrictions contact your company contract manager.
 
-using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
-
-using OpenTelemetry;
 
 using AccelByte.Sdk.Core;
 using AccelByte.Sdk.Feature.AutoTokenRefresh;
 using AccelByte.Sdk.Feature.LocalTokenValidation;
-
-using AccelByte.Sdk.Api;
-using AccelByte.Sdk.Api.Iam.Model;
-
 
 namespace AccelByte.PluginArch.Demo.Server
 {
@@ -34,11 +25,15 @@ namespace AccelByte.PluginArch.Demo.Server
         public DefaultAccelByteServiceProvider(IConfiguration config, ILogger<DefaultAccelByteServiceProvider> logger)
         {
             _Logger = logger;
-            Config = config.GetSection("AccelByte").Get<AppSettingConfigRepository>();
+            AppSettingConfigRepository? abConfig = config.GetSection("AccelByte").Get<AppSettingConfigRepository>();
+            if (abConfig == null)
+                throw new Exception("Missing AccelByte configuration section.");
+            Config = abConfig;
+
             Sdk = AccelByteSDK.Builder
                 .SetConfigRepository(Config)
                 .UseDefaultCredentialRepository()
-                .SetHttpClient(new PluginArchHttpClient())
+                .UseDefaultHttpClient()
                 .UseDefaultTokenRepository()
                 .UseAutoTokenRefresh()
                 .UseAutoRefreshForTokenRevocationList()

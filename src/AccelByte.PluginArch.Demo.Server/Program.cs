@@ -46,48 +46,55 @@ namespace AccelByte.PluginArch.Demo.Server
 
             var builder = WebApplication.CreateBuilder(args);
             builder.Configuration.AddEnvironmentVariables("ABSERVER_");
-
             builder.WebHost.ConfigureKestrel(opt =>
             {
                 opt.AllowAlternateSchemes = true;
             });
 
-            //Get Config
-            AppSettingConfigRepository appConfig = builder.Configuration.GetSection("AccelByte").Get<AppSettingConfigRepository>();
-            bool enableAuthorization = builder.Configuration.GetValue<bool>("EnableAuthorization");
-            bool directLogToLoki = builder.Configuration.GetValue<bool>("DirectLogToLoki");
+            string? appResourceName = Environment.GetEnvironmentVariable("APP_RESOURCE_NAME");
+            if (appResourceName == null)
+                appResourceName = "MMV2GRPCSERVICE ";
 
+            bool enableAuthorization = builder.Configuration.GetValue<bool>("EnableAuthorization");
+            string? strEnableAuth = Environment.GetEnvironmentVariable("PLUGIN_GRPC_SERVER_AUTH_ENABLED");
+            if ((strEnableAuth != null) && (strEnableAuth != String.Empty))
+                enableAuthorization = (strEnableAuth.Trim().ToLower() == "true");
+
+            bool directLogToLoki = builder.Configuration.GetValue<bool>("DirectLogToLoki");
             if (directLogToLoki)
             {
                 string? srLokiUrl = Environment.GetEnvironmentVariable("ASPNETCORE_SERILOG_LOKI");
                 if (srLokiUrl == null)
                     srLokiUrl = builder.Configuration.GetValue<string>("LokiUrl");
-
-                builder.Host.UseSerilog((ctx, cfg) =>
+                if (srLokiUrl != null)
                 {
-                    cfg.MinimumLevel
-                        .Override("Microsoft", LogEventLevel.Information)
-                        .Enrich.FromLogContext()
-                        .WriteTo.GrafanaLoki(srLokiUrl,new List<LokiLabel>()
-                        {
+                    builder.Host.UseSerilog((ctx, cfg) =>
+                    {
+                        cfg.MinimumLevel
+                            .Override("Microsoft", LogEventLevel.Information)
+                            .Enrich.FromLogContext()
+                            .WriteTo.GrafanaLoki(srLokiUrl, new List<LokiLabel>()
+                            {
                             new LokiLabel()
                             {
                                 Key = "application",
-                                Value = appConfig.ResourceName
+                                Value = appResourceName
                             },
                             new LokiLabel()
                             {
                                 Key = "env",
                                 Value = ctx.HostingEnvironment.EnvironmentName
                             }
-                        })
-                        .WriteTo.Console(new RenderedCompactJsonFormatter());
-                });
+                            })
+                            .WriteTo.Console(new RenderedCompactJsonFormatter());
+                    });
+                }
             }
 
             builder.Services
                 .AddSingleton<IAccelByteServiceProvider, DefaultAccelByteServiceProvider>()
-                .AddOpenTelemetryTracing((traceConfig) =>
+                .AddOpenTelemetry()
+                .WithTracing((traceConfig) =>
                 {
                     var asVersion = Assembly.GetEntryAssembly()!.GetName().Version;
                     string version = "0.0.0";
@@ -95,14 +102,14 @@ namespace AccelByte.PluginArch.Demo.Server
                         version = asVersion.ToString();
 
                     traceConfig
-                        .AddSource(appConfig.ResourceName)
+                        .AddSource(appResourceName)
                         .SetResourceBuilder(ResourceBuilder.CreateDefault()
-                            .AddService(appConfig.ResourceName, null, version)
+                            .AddService(appResourceName, null, version)
                             .AddTelemetrySdk())
                         .AddZipkinExporter()
                         .AddHttpClientInstrumentation()
                         .AddAspNetCoreInstrumentation();
-                });                
+                });
 
             // Additional configuration is required to successfully run gRPC on macOS.
             // For instructions on how to configure Kestrel and gRPC clients on macOS, visit https://go.microsoft.com/fwlink/?linkid=2099682

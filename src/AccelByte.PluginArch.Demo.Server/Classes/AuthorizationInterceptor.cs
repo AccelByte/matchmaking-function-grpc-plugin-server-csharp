@@ -1,21 +1,14 @@
-﻿// Copyright (c) 2022 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2022-2023 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
 using System;
 using System.Threading.Tasks;
-using System.Security.Cryptography.Xml;
-using System.IdentityModel.Tokens.Jwt;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
 
 using Grpc.Core;
 using Grpc.Core.Interceptors;
-
-using AccelByte.Sdk.Core;
-using AccelByte.Sdk.Api;
-using AccelByte.Sdk.Feature.LocalTokenValidation;
 
 namespace AccelByte.PluginArch.Demo.Server
 {
