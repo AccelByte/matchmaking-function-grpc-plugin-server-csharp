@@ -1,6 +1,6 @@
 githubOwner = 'AccelByte'
 githubRepo = 'matchmaking-function-grpc-plugin-server-csharp'
-githubSsh = 'dhanarab-sdkbuild-ssh'
+githubSsh = 'accelbyte-sdk-sdkbuild-ssh'
 
 githubUrl = "git@github.com:${githubOwner}/${githubRepo}.git"
 
