@@ -132,10 +132,7 @@ namespace AccelByte.PluginArch.Demo.Server
 
             
             app.MapGrpcService<MatchFunctionService>();
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapGrpcReflectionService();
-            }
+            app.MapGrpcReflectionService();
 
             app.MapGrpcHealthChecksService();
             app.MapMetrics();
