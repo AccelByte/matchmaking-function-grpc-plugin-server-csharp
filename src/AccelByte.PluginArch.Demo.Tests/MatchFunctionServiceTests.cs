@@ -37,7 +37,13 @@ namespace AccelByte.PluginArch.Demo.Tests
         public async Task GetStatCodesTest()
         {
             var service = new MatchFunctionService(_MMS_Logger);
-            var response = await service.GetStatCodes(new GetStatCodesRequest(), new UnitTestCallContext());
+            var response = await service.GetStatCodes(new GetStatCodesRequest()
+            {
+                Rules = new Rules()
+                {
+                    Json = "[\"1\",\"2\",\"3\"]"
+                }
+            }, new UnitTestCallContext());
 
             Assert.IsNotNull(response.Codes);
             Assert.AreEqual(3, response.Codes.Count);

@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 
 using Grpc.Core;
+using Google.Protobuf.WellKnownTypes;
+
 using AccelByte.MatchmakingV2.MatchFunction;
 using AccelByte.PluginArch.Demo.Server.Model;
 
@@ -63,19 +65,45 @@ namespace AccelByte.PluginArch.Demo.Server.Services
 
         public override Task<StatCodesResponse> GetStatCodes(GetStatCodesRequest request, ServerCallContext context)
         {
-            StatCodesResponse response = new StatCodesResponse();
-            response.Codes.Add(new string[] { "1", "2", "3" });
+            _Logger.LogInformation("Received GetStatCodes request.");
+            try
+            {
+                List<string>? rules = JsonSerializer.Deserialize<List<string>>(request.Rules.Json);
+                if (rules == null)
+                    rules = new List<string>();
 
-            return Task.FromResult(response);
+                StatCodesResponse response = new StatCodesResponse();
+                response.Codes.Add(rules);
+
+                return Task.FromResult(response);
+            }
+            catch (Exception x)
+            {
+                _Logger.LogError("Cannot deserialize json rules. " + x.Message);
+                throw;
+            }            
         }
 
         public override Task<ValidateTicketResponse> ValidateTicket(ValidateTicketRequest request, ServerCallContext context)
         {
+            _Logger.LogInformation("Received ValidateTicket request.");
             ValidateTicketResponse response = new ValidateTicketResponse()
             {
                 ValidTicket = true
             };
 
+            return Task.FromResult(response);
+        }
+
+        public override Task<EnrichTicketResponse> EnrichTicket(EnrichTicketRequest request, ServerCallContext context)
+        {
+            _Logger.LogInformation("Received EnrichTicket request.");
+
+            Ticket ticket = request.Ticket;
+            if (ticket.TicketAttributes.Fields.Count <= 0)
+                ticket.TicketAttributes.Fields.Add("enrichedNumber", Value.ForNumber(20));
+
+            EnrichTicketResponse response = new EnrichTicketResponse() { Ticket = ticket };
             return Task.FromResult(response);
         }
 
@@ -128,6 +156,18 @@ namespace AccelByte.PluginArch.Demo.Server.Services
             if (_UnmatchedTickets.Count >= _ShipCountMin)
             {
                 await CreateAndPushMatchResultAndClearUnmatchedTickets(responseStream);
+            }
+        }
+
+        public override async Task BackfillMatches(IAsyncStreamReader<BackfillMakeMatchesRequest> requestStream, IServerStreamWriter<BackfillResponse> responseStream, ServerCallContext context)
+        {
+            while (await requestStream.MoveNext())
+            {
+                await responseStream.WriteAsync(new BackfillResponse()
+                {
+                    BackfillProposal = new BackfillProposal()
+                });
+
             }
         }
     }
