@@ -1,12 +1,13 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0.302 as builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 as builder
 ARG PROJECT_PATH=src/AccelByte.PluginArch.Demo.Server
+ARG TARGETARCH
 WORKDIR /build
 COPY $PROJECT_PATH/*.csproj ./
-RUN dotnet restore
+RUN dotnet restore -a $TARGETARCH
 COPY $PROJECT_PATH ./
-RUN dotnet publish -c Release -o output
+RUN dotnet publish -a $TARGETARCH --no-restore -c Release -o output
 
-FROM mcr.microsoft.com/dotnet/sdk:6.0.302
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/sdk:6.0.302
 WORKDIR /app
 COPY --from=builder /build/output/* ./
 RUN chmod +x /app/AccelByte.PluginArch.Demo.Server
