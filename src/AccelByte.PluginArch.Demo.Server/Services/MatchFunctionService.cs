@@ -68,12 +68,7 @@ namespace AccelByte.PluginArch.Demo.Server.Services
             _Logger.LogInformation("Received GetStatCodes request.");
             try
             {
-                List<string>? rules = JsonSerializer.Deserialize<List<string>>(request.Rules.Json);
-                if (rules == null)
-                    rules = new List<string>();
-
                 StatCodesResponse response = new StatCodesResponse();
-                response.Codes.Add(rules);
 
                 return Task.FromResult(response);
             }
