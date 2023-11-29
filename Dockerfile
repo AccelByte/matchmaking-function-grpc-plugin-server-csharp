@@ -1,16 +1,12 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 as builder
+FROM mcr.microsoft.com/dotnet/sdk:6.0.417 as builder
 ARG PROJECT_PATH=src/AccelByte.PluginArch.Demo.Server
-ARG TARGETARCH
 WORKDIR /build
-COPY $PROJECT_PATH/*.csproj ./
-RUN dotnet restore -a $TARGETARCH
-COPY $PROJECT_PATH ./
-RUN dotnet publish -a $TARGETARCH --no-restore -c Release -o output
+COPY $PROJECT_PATH/ .
+RUN dotnet publish -c Release -o output
 
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/sdk:6.0.302
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/sdk:6.0.417
 WORKDIR /app
-COPY --from=builder /build/output/* ./
-RUN chmod +x /app/AccelByte.PluginArch.Demo.Server
+COPY --from=builder /build/output/ .
 # Plugin arch gRPC server port
 EXPOSE 6565
 # Prometheus /metrics web server port
