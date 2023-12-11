@@ -28,6 +28,7 @@ namespace AccelByte.PluginArch.Demo.Server
             AppSettingConfigRepository? abConfig = config.GetSection("AccelByte").Get<AppSettingConfigRepository>();
             if (abConfig == null)
                 throw new Exception("Missing AccelByte configuration section.");
+            abConfig.ReadEnvironmentVariables();
             Config = abConfig;
 
             Sdk = AccelByteSDK.Builder
@@ -36,6 +37,7 @@ namespace AccelByte.PluginArch.Demo.Server
                 .UseDefaultHttpClient()
                 .UseDefaultTokenRepository()
                 .UseAutoTokenRefresh()
+                .UseLocalTokenValidator()
                 .UseAutoRefreshForTokenRevocationList()
                 .Build();
         }
