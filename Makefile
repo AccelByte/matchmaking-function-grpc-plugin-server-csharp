@@ -4,10 +4,10 @@
 
 SHELL := /bin/bash
 
-IMAGE_NAME := $(shell basename "$$(pwd)")-app
-IMAGE_VERSION ?= latest
 BUILDER := grpc-plugin-server-builder
 DOTNETVER := 6.0.417
+IMAGE_NAME := $(shell basename "$$(pwd)")-app
+IMAGE_VERSION ?= latest
 
 .PHONY: build image imagex test
 
@@ -59,3 +59,8 @@ test_functional_accelbyte_hosted:
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $$(pwd):/data \
 		-w /data matchmaking-test-functional bash ./test/functional/test-accelbyte-hosted.sh
+
+ngrok:
+	@test -n "$(NGROK_AUTHTOKEN)" || (echo "NGROK_AUTHTOKEN is not set" ; exit 1)
+	docker run --rm -it --net=host -e NGROK_AUTHTOKEN=$(NGROK_AUTHTOKEN) ngrok/ngrok:3-alpine \
+			tcp 6565	# gRPC server port
