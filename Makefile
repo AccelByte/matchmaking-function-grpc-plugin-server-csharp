@@ -8,12 +8,16 @@ BUILDER := grpc-plugin-server-builder
 DOTNETVER := 6.0.417
 IMAGE_NAME := $(shell basename "$$(pwd)")-app
 IMAGE_VERSION ?= latest
+APP_PATH := AccelByte.PluginArch.Demo.Server
 
 .PHONY: build image imagex test
 
 build:
-	docker run --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/src -e HOME="/data" -e DOTNET_CLI_HOME="/data" -e XDG_DATA_HOME="/data" mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) \
-			dotnet build
+	docker run --rm -u $$(id -u):$$(id -g) \
+		-v $$(pwd):/data/ \
+		-e HOME="/data/.testrun" -e DOTNET_CLI_HOME="/data/.testrun" \
+		mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) \
+		sh -c "mkdir /data/.testrun && cp -r /data/src /data/.testrun/src && cd /data/.testrun/src && dotnet build && mkdir /data/.output && cp -r /data/.testrun/src/$(APP_PATH)/bin/* /data/.output/ && rm -rf /data/.testrun"
 
 image:
 	docker buildx build -t ${IMAGE_NAME} --load .
@@ -32,8 +36,12 @@ imagex_push:
 	docker buildx rm --keep-state $(BUILDER)
 
 test:
-	docker run --rm -u $$(id -u):$$(id -g) -v $$(pwd):/data/ -w /data/src -e HOME="/data" -e DOTNET_CLI_HOME="/data" -e XDG_DATA_HOME="/data" mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) \
-			dotnet test
+	docker run --rm -u $$(id -u):$$(id -g) \
+		-v $$(pwd):/data/ \
+		-e HOME="/data/.testrun" -e DOTNET_CLI_HOME="/data/.testrun" \
+		-e XDG_DATA_HOME="/data/.testrun" \
+		mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) \
+		sh -c "mkdir /data/.testrun && cp -r /data/src /data/.testrun/src && cd /data/.testrun/src && dotnet test && rm -rf /data/.testrun"
 
 test_functional_local_hosted:
 	@test -n "$(ENV_PATH)" || (echo "ENV_PATH is not set"; exit 1)
