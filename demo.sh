@@ -16,16 +16,6 @@ if [ -z "$GRPC_SERVER_URL" ] && [ -z "$EXTEND_APP_NAME" ]; then
   exit 1
 fi
 
-DEMO_PREFIX='mmv2_grpc_demo'
-NUMBER_OF_PLAYERS=3
-
-api_curl()
-{
-  curl -s -D api_curl_http_header.out -o api_curl_http_response.out -w '%{http_code}' "$@" > api_curl_http_code.out
-  echo >> api_curl_http_response.out
-  cat api_curl_http_response.out
-}
-
 get_code_verifier() 
 {
   echo $RANDOM | sha256sum | cut -d ' ' -f 1   # For demo only: In reality, it needs to be secure random
@@ -34,6 +24,19 @@ get_code_verifier()
 get_code_challenge()
 {
   echo -n "$1" | sha256sum | xxd -r -p | base64 -w 0 | sed -e 's/+/-/g' -e 's/\//\_/g' -e 's/=//g'
+}
+
+CURRENT_TIME=$(date)
+RANDOM_PREFIX="$(get_code_verifier | cut -c1-6)"
+
+DEMO_PREFIX='mmv2_grpc_demo_cs_'$RANDOM_PREFIX
+NUMBER_OF_PLAYERS=3
+
+api_curl()
+{
+  curl -s -D api_curl_http_header.out -o api_curl_http_response.out -w '%{http_code}' "$@" > api_curl_http_code.out
+  echo >> api_curl_http_response.out
+  cat api_curl_http_response.out
 }
 
 function clean_up()
@@ -146,7 +149,7 @@ for PLAYER_NUMBER in $(seq $NUMBER_OF_PLAYERS); do
   USER_ID="$(api_curl "${AB_BASE_URL}/iam/v4/public/namespaces/$AB_NAMESPACE/users" \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
       -H 'Content-Type: application/json' \
-      -d "{\"authType\":\"EMAILPASSWD\",\"country\":\"ID\",\"dateOfBirth\":\"1995-01-10\",\"displayName\":\"MMv2 gRPC Player\",\"emailAddress\":\"${DEMO_PREFIX}_player_$PLAYER_NUMBER@test.com\",\"password\":\"GFPPlmdb2-\",\"username\":\"${DEMO_PREFIX}_player_$PLAYER_NUMBER\"}" | jq --raw-output .userId)"
+      -d "{\"authType\":\"EMAILPASSWD\",\"country\":\"ID\",\"dateOfBirth\":\"1995-01-10\",\"displayName\":\"MMv2 gRPC Player $RANDOM_PREFIX $PLAYER_NUMBER\",\"uniqueDisplayName\":\"MMv2 gRPC Player $RANDOM_PREFIX $PLAYER_NUMBER\",\"emailAddress\":\"${DEMO_PREFIX}_player_$PLAYER_NUMBER@test.com\",\"password\":\"GFPPlmdb2-\",\"username\":\"${DEMO_PREFIX}_player_$PLAYER_NUMBER\"}" | jq --raw-output .userId)"
   
   if [ "$(cat api_curl_http_code.out)" -ge "400" ]; then
     cat api_curl_http_response.out

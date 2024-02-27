@@ -1,7 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0.417
+FROM mcr.microsoft.com/dotnet/sdk:6.0-alpine3.18
 WORKDIR /workspace
-RUN apt update && apt install -y bash curl docker git jq make xxd \
-        && apt clean \
-        && rm -rf /var/lib/apt/lists/*
-COPY --from=docker:dind /usr/local/bin/docker /usr/local/bin/
-COPY --from=ngrok/ngrok /bin/ngrok /bin/ngrok
+RUN apk --no-cache add bash curl docker-cli-buildx git jq make gcompat
+COPY --from=ngrok/ngrok:latest /bin/ngrok /bin/ngrok
