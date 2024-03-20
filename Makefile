@@ -5,7 +5,7 @@
 SHELL := /bin/bash
 
 BUILDER := grpc-plugin-server-builder
-DOTNETVER := 6.0.417
+DOTNETVER := 6.0
 IMAGE_NAME := $(shell basename "$$(pwd)")-app
 IMAGE_VERSION ?= latest
 APP_PATH := AccelByte.PluginArch.Demo.Server
