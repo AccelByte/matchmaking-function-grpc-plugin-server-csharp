@@ -15,7 +15,7 @@ APP_PATH := AccelByte.PluginArch.Demo.Server
 build:
 	docker run --rm -u $$(id -u):$$(id -g) \
 		-v $$(pwd):/data/ \
-		-e HOME="/data/.testrun" -e DOTNET_CLI_HOME="/data/.testrun" \
+		-e HOME="/data/.cache" -e DOTNET_CLI_HOME="/data/.cache" \
 		mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) \
 		sh -c "mkdir -p /data/.testrun && cp -r /data/src /data/.testrun/src && cd /data/.testrun/src && dotnet build && mkdir -p /data/.output && cp -r /data/.testrun/src/$(APP_PATH)/bin/* /data/.output/ && rm -rf /data/.testrun"
 
@@ -38,7 +38,7 @@ imagex_push:
 test:
 	docker run --rm -u $$(id -u):$$(id -g) \
 		-v $$(pwd):/data/ \
-		-e HOME="/data/.testrun" -e DOTNET_CLI_HOME="/data/.testrun" \
+		-e HOME="/data/.cache" -e DOTNET_CLI_HOME="/data/.cache" \
 		-e XDG_DATA_HOME="/data/.testrun" \
 		mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) \
 		sh -c "mkdir -p /data/.testrun && cp -r /data/src /data/.testrun/src && cd /data/.testrun/src && dotnet test && rm -rf /data/.testrun"
@@ -48,8 +48,8 @@ test_functional_local_hosted:
 	docker build --tag matchmaking-test-functional -f test/functional/Dockerfile test/functional && \
 	docker run --rm -t \
 		--env-file $(ENV_PATH) \
-		-e DOTNET_CLI_HOME="/data" \
-		-e XDG_DATA_HOME="/data" \
+		-e DOTNET_CLI_HOME="/data/.cache" \
+		-e XDG_DATA_HOME="/data/.cache" \
 		-u $$(id -u):$$(id -g) \
 		-v $$(pwd):/data \
 		-w /data matchmaking-test-functional bash ./test/functional/test-local-hosted.sh
@@ -62,9 +62,9 @@ endif
 	docker build --tag matchmaking-test-functional -f test/functional/Dockerfile test/functional && \
 	docker run --rm -t \
 		--env-file $(ENV_PATH) \
-		-e DOTNET_CLI_HOME="/data" \
-		-e XDG_DATA_HOME="/data" \
-		-e DOCKER_CONFIG=/tmp/.docker \
+		-e DOTNET_CLI_HOME="/data/.cache" \
+		-e XDG_DATA_HOME="/data/.cache" \
+		-e DOCKER_CONFIG="/tmp/.docker" \
 		$(DARGS) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $$(pwd):/data \
