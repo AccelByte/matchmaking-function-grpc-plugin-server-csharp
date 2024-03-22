@@ -6,3 +6,4 @@ Makefile
 .env
 src/*/bin
 src/*/obj
+src/.vs
