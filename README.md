@@ -78,7 +78,6 @@ For more options, create `src/AccelByte.PluginArch.Demo.Server/appsettings.Devel
 
 ```json
 {
-  "DirectLogToLoki": false,
   "EnableAuthorization": true,                 // Enable or disable access token and permission check (env var: PLUGIN_GRPC_SERVER_AUTH_ENABLED)
   "RevocationListRefreshPeriod": 60,
   "AccelByte": {
@@ -302,8 +301,6 @@ After done testing, you may want to deploy this app to `AccelByte Gaming Service
 |-|-|-|
 |Kestrel.Endpoints.Http.Url|Prometheus scrapper endpoint|http://0.0.0.0:8080|
 |Kestrel.Endpoints.Grpc.Url|Grpc service endpoint|http://0.0.0.0:6565|
-|DirectLogToLoki|Enable sending log directly to Loki|false|
-|LokiUrl|Loki URL for sending log (can be overridden by env var)|http://localhost:3100|
 |EnableAuthorization|Enable access token validation|true|
 |RevocationListRefreshPeriod|Interval value to refresh token revocation list cache (in seconds)|600|
 |AccelByte.BaseUrl|AccelByte Cloud url. [Here](https://github.com/AccelByte/accelbyte-csharp-sdk/blob/main/README.md#usage) for more information||
@@ -319,4 +316,3 @@ After done testing, you may want to deploy this app to `AccelByte Gaming Service
 |-|-|
 |ASPNETCORE_ENVIRONMENT|ASP.NET Core runtime environment. Read more about it [here](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments?view=aspnetcore-6.0). Default is `Development`. Make sure that this value match the name for appsettings json file. E.g. `Development` will read configuration value from `appsettings.Development.json` and `Production` will read configuration value from `appsettings.Production.json`.|
 |OTEL_EXPORTER_ZIPKIN_ENDPOINT|[OpenTelemetry zipkin endpoint](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry.Exporter.Zipkin/README.md).|
-|ASPNETCORE_SERILOG_LOKI|Set Loki instance url to send log directly to Loki. If this var is specified, it will override `LokiUrl` in `appsettings`|
