@@ -39,7 +39,11 @@ namespace AccelByte.PluginArch.Demo.Server.Services
             List<string> playerIds = players.Select(p => p.PlayerId).ToList();
 
             Match match = new Match();
-            match.RegionPreferences.Add("any");
+
+            // RegionPreference value is just an example. The value(s) should be from the best region on the matchmaker.Ticket.Latencies
+            match.RegionPreferences.Add("us-east-2");
+            match.RegionPreferences.Add("us-west-2");
+            
             match.Tickets.AddRange(_UnmatchedTickets);
 
             Match.Types.Team team = new Match.Types.Team();
