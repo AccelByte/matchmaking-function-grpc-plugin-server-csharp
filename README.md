@@ -253,7 +253,7 @@ $ docker compose up --build
 > :warning: **To perform the following, make sure PLUGIN_GRPC_SERVER_AUTH_ENABLED is set to `false`**: Otherwise,
 the gRPC request will be rejected by the `gRPC server`.
 
-This app can be tested locally using [postman](https://www.postman.com/).
+This app can be tested locally using [Postman](https://www.postman.com/).
 
 1. Run this app by using the command below.
 
@@ -261,7 +261,7 @@ This app can be tested locally using [postman](https://www.postman.com/).
    docker compose up --build
    ```
 
-2. Open `postman`, create a new `gRPC request`, and enter `localhost:6565` as server URL.
+2. Open `Postman`, create a new `gRPC request`, and enter `localhost:6565` as server URL.
 
    > :warning: **If you are running [grpc-plugin-dependencies](https://github.com/AccelByte/grpc-plugin-dependencies) stack alongside this project as mentioned in [Test Observability](#test-observability)**: Use `localhost:10000` instead of `localhost:6565`. This way, the `gRPC server` will be called via `Envoy` service within `grpc-plugin-dependencies` stack instead of directly.
 
@@ -279,7 +279,7 @@ This app can be tested locally using [postman](https://www.postman.com/).
    }
    ```
 
-5. Now we can send match ticket to start matchmaking by copying sample `json` below and replace it into `postman` message then click `Send`.
+5. Now we can send match ticket to start matchmaking by copying sample `json` below and replace it into `Postman` message then click `Send`.
 
    ```json
    {
@@ -295,7 +295,7 @@ This app can be tested locally using [postman](https://www.postman.com/).
 
 6. You can do step *5* multiple times until the number of players is met and a match can be created. In this case, it is 2 players.
 
-7. If successful, you will receive responses (down stream) in `postman` that looks like the following.
+7. If successful, you will receive responses (down stream) in `Postman` that looks like the following.
 
    ```json
    {
@@ -362,20 +362,8 @@ can use something like [ngrok](https://ngrok.com/).
 
    > :warning: **Oauth Client created in this step is different from the one from Prerequisites section:** It is required by [demo.sh](demo.sh) script in the next step to register the `gRPC Server` URL and also to create and delete test users.
    
-5. Run the [demo.sh](demo.sh) script to simulate the matchmaking flow which calls this app using the `Client ID` and `Client Secret` created in the previous step. Pay attention to this app console log when matchmaking flow is running. The `gRPC Server` methods should get called when creating match tickets and it should group players in twos.
+5. Import the [Postman collection](demo/matchmaking-function-grpc-plugin-server.postman_collection.json) into Postman to simulate the matchmaking flow. Follow the instructions in the Postman collection overview to set up the environment, using the Client ID and Client Secret from the previous step. Monitor the Extend app console log while the matchmaking flow is running. The gRPC server methods should be triggered when creating match tickets, and players should be grouped in pairs.
 
-   ```
-   export AB_BASE_URL='https://test.accelbyte.io'
-   export AB_CLIENT_ID='xxxxxxxxxx'         # Use Client ID from the previous step
-   export AB_CLIENT_SECRET='xxxxxxxxxx'     # Use Client Secret from the previous step    
-   export AB_NAMESPACE='accelbyte'          # Use your Namespace ID
-   export GRPC_SERVER_URL='http://0.tcp.ap.ngrok.io:xxxxx'  # Use your ngrok forwarding URL
-   bash demo.sh
-   ```
-
-   > :warning: **Make sure demo.sh has Unix line-endings (LF)**: If this repository was cloned in Windows for example, the `demo.sh` may have Windows line-endings (CRLF) instead. In this case, use tools like `dos2unix` to change the line-endings to Unix (LF).
-   Invalid line-endings may cause errors such as `demo.sh: line 2: $'\r': command not found`.
- 
 > :warning: **Ngrok free plan has some limitations**: You may want to use paid plan if the traffic is high.
 
 ### Test Observability
