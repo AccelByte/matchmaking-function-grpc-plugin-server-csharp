@@ -38,14 +38,6 @@ imagex_push:
 	docker buildx build -t ${REPO_URL}:${IMAGE_TAG} --platform linux/amd64 --push .
 	docker buildx rm --keep-state $(BUILDER)
 
-test:
-	docker run --rm -u $$(id -u):$$(id -g) \
-		-v $$(pwd):/data/ \
-		-e HOME="/data/.cache" -e DOTNET_CLI_HOME="/data/.cache" \
-		-e XDG_DATA_HOME="/data/.tmp" \
-		mcr.microsoft.com/dotnet/sdk:$(DOTNETVER) \
-		sh -c "mkdir -p /data/.tmp && cp -r /data/src /data/.tmp/src && cd /data/.tmp/src && dotnet test && rm -rf /data/.tmp"
-
 ngrok:
 	@which ngrok || (echo "ngrok is not installed" ; exit 1)
 	@test -n "$(NGROK_AUTHTOKEN)" || (echo "NGROK_AUTHTOKEN is not set" ; exit 1)
