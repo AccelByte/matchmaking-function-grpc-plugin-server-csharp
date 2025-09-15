@@ -97,11 +97,11 @@ your own logic for the custom functions.
          ...
          ```
 
-   d. .NET 6 SDK
+   d. .NET 8 SDK
 
       - On Linux Ubuntu:
 
-         To install from the Ubuntu repository, run `sudo apt-get update && sudo apt-get install -y dotnet-sdk-6.0`.
+         To install from the Ubuntu repository, run `sudo apt-get update && sudo apt-get install -y dotnet-sdk-8.0`.
 
       - On Windows or macOS:
 
@@ -110,7 +110,7 @@ your own logic for the custom functions.
          ```
          dotnet --version
          
-         6.0.128
+         8.0.119
          ```
 
    e. [Postman](https://www.postman.com/)
