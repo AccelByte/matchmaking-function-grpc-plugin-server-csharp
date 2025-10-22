@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2022 AccelByte Inc. All Rights Reserved.
+﻿// Copyright (c) 2022-2025 AccelByte Inc. All Rights Reserved.
 // This is licensed software from AccelByte Inc, for limitations
 // and restrictions contact your company contract manager.
 
@@ -24,44 +24,6 @@ namespace AccelByte.PluginArch.Demo.Server.Services
     {
         private readonly ILogger<MatchFunctionService> _Logger;
 
-        private int _ShipCountMin = 2;
-
-        private int _ShipCountMax = 2;
-
-        private List<Ticket> _UnmatchedTickets = new List<Ticket>();
-
-        private Match MakeMatchFromUnmatchedTickets()
-        {
-            List<Ticket.Types.PlayerData> players = new List<Ticket.Types.PlayerData>();
-            for (int i = 0; i < _UnmatchedTickets.Count; i++)
-                players.AddRange(_UnmatchedTickets[i].Players);
-
-            List<string> playerIds = players.Select(p => p.PlayerId).ToList();
-
-            Match match = new Match();
-
-            // RegionPreference value is just an example. The value(s) should be from the best region on the matchmaker.Ticket.Latencies
-            match.RegionPreferences.Add("us-east-2");
-            match.RegionPreferences.Add("us-west-2");
-            
-            match.Tickets.AddRange(_UnmatchedTickets);
-
-            Match.Types.Team team = new Match.Types.Team();
-            team.UserIds.AddRange(playerIds);
-            match.Teams.Add(team);
-
-            return match;
-        }
-
-        private async Task CreateAndPushMatchResultAndClearUnmatchedTickets(IServerStreamWriter<MatchResponse> responseStream)
-        {
-            await responseStream.WriteAsync(new MatchResponse()
-            {
-                Match = MakeMatchFromUnmatchedTickets()
-            });
-            _UnmatchedTickets.Clear();
-        }
-
         public MatchFunctionService(ILogger<MatchFunctionService> logger)
         {
             _Logger = logger;
@@ -72,15 +34,33 @@ namespace AccelByte.PluginArch.Demo.Server.Services
             _Logger.LogInformation("Received GetStatCodes request.");
             try
             {
-                StatCodesResponse response = new StatCodesResponse();
+                string rulesJson = request.Rules?.Json ?? "{}";
+                GameRules? rules = JsonSerializer.Deserialize<GameRules>(rulesJson);
+                if (rules != null)
+                {
+                    try
+                    {
+                        rules.Validate();
+                    }
+                    catch (ValidationError ex)
+                    {
+                        throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+                    }
+                }
 
+                StatCodesResponse response = new StatCodesResponse();
                 return Task.FromResult(response);
             }
-            catch (Exception x)
+            catch (ValidationError ex)
             {
-                _Logger.LogError("Cannot deserialize json rules. " + x.Message);
+                _Logger.LogError($"Validation error: {ex.Message}");
+                throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError($"Cannot deserialize json rules: {ex.Message}");
                 throw;
-            }            
+            }
         }
 
         public override Task<ValidateTicketResponse> ValidateTicket(ValidateTicketRequest request, ServerCallContext context)
@@ -108,66 +88,284 @@ namespace AccelByte.PluginArch.Demo.Server.Services
 
         public override async Task MakeMatches(IAsyncStreamReader<MakeMatchesRequest> requestStream, IServerStreamWriter<MatchResponse> responseStream, ServerCallContext context)
         {
+            bool firstMessage = true;
+            int matchesMade = 0;
+            GameRules? rules = null;
+            Queue<Ticket> unmatchedTickets = new Queue<Ticket>();
+
             while (await requestStream.MoveNext())
             {
                 MakeMatchesRequest request = requestStream.Current;
-                _Logger.LogInformation("Received make matches request.");
-                if (request.Parameters != null)
-                {
-                    _Logger.LogInformation("Received parameters");
-                    if (request.Parameters.Rules != null)
-                    {
-                        RuleObject? ruleObj = JsonSerializer.Deserialize<RuleObject>(request.Parameters.Rules.Json);
-                        if (ruleObj == null)
-                        {
-                            _Logger.LogError("Invalid Rules JSON");
-                            throw new Exception("Invalid Rules JSON");
-                        }
+                _Logger.LogInformation("Received MakeMatches request.");
 
-                        if ((ruleObj.ShipCountMin != 0) && (ruleObj.ShipCountMax != 0)
-                            && (ruleObj.ShipCountMin <= ruleObj.ShipCountMax))
-                        {
-                            _ShipCountMin = ruleObj.ShipCountMin;
-                            _ShipCountMax = ruleObj.ShipCountMax;
-                            _Logger.LogInformation(String.Format(
-                                "Update shipCountMin = {0} and shipCountMax = {1}",
-                                _ShipCountMin, _ShipCountMax
-                            ));
-                        }
+                if (firstMessage)
+                {
+                    firstMessage = false;
+                    if (request.Parameters == null)
+                    {
+                        string error = "First message must have the expected 'parameters' set.";
+                        _Logger.LogError(error);
+                        throw new RpcException(new Status(StatusCode.InvalidArgument, error));
+                    }
+
+                    try
+                    {
+                        string rulesJson = request.Parameters.Rules?.Json ?? "{}";
+                        rules = JsonSerializer.Deserialize<GameRules>(rulesJson);
+                        rules?.Validate();
+                    }
+                    catch (ValidationError ex)
+                    {
+                        _Logger.LogError($"Validation error: {ex.Message}");
+                        throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
                     }
                 }
-
-                if (request.Ticket != null)
+                else
                 {
-                    _Logger.LogInformation("Received ticket");
-                    _UnmatchedTickets.Add(request.Ticket);
-                    if (_UnmatchedTickets.Count == _ShipCountMax)
+                    if (rules == null)
                     {
-                        await CreateAndPushMatchResultAndClearUnmatchedTickets(responseStream);
+                        string error = "Rules not initialized.";
+                        _Logger.LogError(error);
+                        throw new RpcException(new Status(StatusCode.FailedPrecondition, error));
                     }
 
-                    _Logger.LogInformation("Unmatched tickets size : " + _UnmatchedTickets.Count.ToString());
+                    if (request.Ticket == null)
+                    {
+                        string error = "Message must have the expected 'ticket' set.";
+                        _Logger.LogError(error);
+                        throw new RpcException(new Status(StatusCode.InvalidArgument, error));
+                    }
+
+                    unmatchedTickets.Enqueue(request.Ticket);
+                    
+                    var matches = BuildMatches(rules, unmatchedTickets);
+                    foreach (var match in matches)
+                    {
+                        var response = new MatchResponse { Match = match };
+                        _Logger.LogInformation("Match made and sent to client!");
+                        await responseStream.WriteAsync(response);
+                        matchesMade++;
+                    }
+
+                    if (matches.Count == 0)
+                    {
+                        _Logger.LogInformation($"Not enough tickets to create a match: {unmatchedTickets.Count}");
+                    }
                 }
             }
 
-            //complete
-            _Logger.LogInformation("On completed. Unmatched tickets size: " + _UnmatchedTickets.Count.ToString());
-            if (_UnmatchedTickets.Count >= _ShipCountMin)
+            _Logger.LogInformation($"Received MakeMatches (end): {matchesMade} match(es) made");
+        }
+
+        private List<Match> BuildMatches(GameRules rules, Queue<Ticket> unmatchedTickets)
+        {
+            var matches = new List<Match>();
+
+            var (minPlayers, maxPlayers) = CalculatePlayerLimits(rules);
+
+            while (unmatchedTickets.Count >= minPlayers)
             {
-                await CreateAndPushMatchResultAndClearUnmatchedTickets(responseStream);
+                int numPlayers = unmatchedTickets.Count >= maxPlayers ? maxPlayers : minPlayers;
+
+                _Logger.LogInformation("Received enough tickets to create a match!");
+
+                bool backfill = rules.AutoBackfill && numPlayers < maxPlayers;
+
+                var matchedTickets = new List<Ticket>(numPlayers);
+                for (int i = 0; i < numPlayers; i++)
+                {
+                    matchedTickets.Add(unmatchedTickets.Dequeue());
+                }
+
+                var playerIds = matchedTickets
+                    .SelectMany(t => t.Players)
+                    .Select(p => p.PlayerId)
+                    .ToList();
+
+                string teamId = Guid.NewGuid().ToString("N");
+                var team = new Match.Types.Team
+                {
+                    TeamId = teamId
+                };
+                team.UserIds.AddRange(playerIds);
+
+                var match = new Match
+                {
+                    Backfill = backfill
+                };
+                match.Tickets.AddRange(matchedTickets);
+                match.Teams.Add(team);
+                match.MatchAttributes.Fields["small-team-1"] = Value.ForString(teamId);
+                
+                // RegionPreference value is just an example.
+                // The value(s) should be from the best region on the matchmaker.Ticket.Latencies
+                match.RegionPreferences.Add("us-east-2");
+                match.RegionPreferences.Add("us-west-2");
+
+                matches.Add(match);
             }
+
+            return matches;
+        }
+
+        private (int minPlayers, int maxPlayers) CalculatePlayerLimits(GameRules rules)
+        {
+            int minPlayers = 0;
+            int maxPlayers = 0;
+
+            if (rules.Alliance != null)
+            {
+                minPlayers = rules.Alliance.MinNumber * rules.Alliance.PlayerMinNumber;
+                maxPlayers = rules.Alliance.MaxNumber * rules.Alliance.PlayerMaxNumber;
+            }
+
+            if (minPlayers == 0 && maxPlayers == 0)
+            {
+                minPlayers = 2;
+                maxPlayers = 2;
+            }
+
+            if (rules.ShipCountMin != 0)
+            {
+                minPlayers *= rules.ShipCountMin;
+            }
+
+            if (rules.ShipCountMax != 0)
+            {
+                maxPlayers *= rules.ShipCountMax;
+            }
+
+            return (minPlayers, maxPlayers);
         }
 
         public override async Task BackfillMatches(IAsyncStreamReader<BackfillMakeMatchesRequest> requestStream, IServerStreamWriter<BackfillResponse> responseStream, ServerCallContext context)
         {
+            bool firstMessage = true;
+            int proposalsMade = 0;
+            GameRules? rules = null;
+            Queue<Ticket> unmatchedTickets = new Queue<Ticket>();
+            Queue<BackfillTicket> unmatchedBackfillTickets = new Queue<BackfillTicket>();
+
             while (await requestStream.MoveNext())
             {
-                await responseStream.WriteAsync(new BackfillResponse()
-                {
-                    BackfillProposal = new BackfillProposal()
-                });
+                BackfillMakeMatchesRequest request = requestStream.Current;
+                _Logger.LogInformation("Received BackfillMatches request.");
 
+                if (firstMessage)
+                {
+                    firstMessage = false;
+                    if (request.Parameters == null)
+                    {
+                        string error = "First message must have the expected 'parameters' set.";
+                        _Logger.LogError(error);
+                        throw new RpcException(new Status(StatusCode.InvalidArgument, error));
+                    }
+
+                    try
+                    {
+                        string rulesJson = request.Parameters.Rules?.Json ?? "{}";
+                        rules = JsonSerializer.Deserialize<GameRules>(rulesJson);
+                        rules?.Validate();
+                    }
+                    catch (ValidationError ex)
+                    {
+                        _Logger.LogError($"Validation error: {ex.Message}");
+                        throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+                    }
+                }
+                else
+                {
+                    if (rules == null)
+                    {
+                        string error = "Rules not initialized.";
+                        _Logger.LogError(error);
+                        throw new RpcException(new Status(StatusCode.FailedPrecondition, error));
+                    }
+
+                    if (request.Ticket != null)
+                    {
+                        unmatchedTickets.Enqueue(request.Ticket);
+                    }
+                    else if (request.BackfillTicket != null)
+                    {
+                        unmatchedBackfillTickets.Enqueue(request.BackfillTicket);
+                    }
+
+                    var proposals = BuildBackfillProposals(unmatchedTickets, unmatchedBackfillTickets);
+                    foreach (var proposal in proposals)
+                    {
+                        var response = new BackfillResponse { BackfillProposal = proposal };
+                        _Logger.LogInformation("Backfill proposal made and sent to client!");
+                        await responseStream.WriteAsync(response);
+                        proposalsMade++;
+                    }
+
+                    if (proposals.Count == 0)
+                    {
+                        _Logger.LogInformation($"Not enough tickets to create a backfill proposal: {unmatchedTickets.Count}, {unmatchedBackfillTickets.Count}");
+                    }
+                }
             }
+
+            _Logger.LogInformation($"Received BackfillMatches (end): {proposalsMade} proposal(s) made");
+        }
+
+        private List<BackfillProposal> BuildBackfillProposals(
+            Queue<Ticket> unmatchedTickets,
+            Queue<BackfillTicket> unmatchedBackfillTickets)
+        {
+            var proposals = new List<BackfillProposal>();
+
+            while (unmatchedTickets.Count > 0 && unmatchedBackfillTickets.Count > 0)
+            {
+                _Logger.LogInformation("Received enough tickets to backfill!");
+
+                var backfillTicket = unmatchedBackfillTickets.Dequeue();
+                var ticket = unmatchedTickets.Dequeue();
+
+                var proposal = CreateBackfillProposal(backfillTicket, ticket);
+                proposals.Add(proposal);
+            }
+
+            return proposals;
+        }
+
+        private BackfillProposal CreateBackfillProposal(BackfillTicket backfillTicket, Ticket newTicket)
+        {
+            string teamId = Guid.NewGuid().ToString("N");
+            var newTeam = new BackfillProposal.Types.Team
+            {
+                TeamId = teamId
+            };
+
+            var proposal = new BackfillProposal
+            {
+                BackfillTicketId = backfillTicket.TicketId,
+                CreatedAt = Timestamp.FromDateTime(DateTime.UtcNow),
+                ProposalId = "",
+                MatchPool = backfillTicket.MatchPool,
+                MatchSessionId = backfillTicket.MatchSessionId
+            };
+
+            proposal.AddedTickets.Add(newTicket);
+
+            if (backfillTicket.PartialMatch?.Teams != null)
+            {
+                foreach (var existingTeam in backfillTicket.PartialMatch.Teams)
+                {
+                    var proposalTeam = new BackfillProposal.Types.Team
+                    {
+                        TeamId = existingTeam.TeamId
+                    };
+                    proposalTeam.UserIds.AddRange(existingTeam.UserIds);
+                    proposalTeam.Parties.AddRange(existingTeam.Parties);
+                    proposal.ProposedTeams.Add(proposalTeam);
+                }
+            }
+
+            proposal.ProposedTeams.Add(newTeam);
+
+            return proposal;
         }
     }
 }
