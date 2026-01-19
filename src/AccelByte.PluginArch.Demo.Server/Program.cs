@@ -33,7 +33,7 @@ namespace AccelByte.PluginArch.Demo.Server
             if (appServiceName == null)
                 appServiceName = "extend-app-matchmaking-func";
             else
-                appServiceName = $"extend-app-{appServiceName.Trim().ToLower()}";
+                appServiceName = $"extend-app-mm-{appServiceName.Trim().ToLower()}";
 
             Metrics.DefaultRegistry.SetStaticLabels(new Dictionary<string, string>()
             {
